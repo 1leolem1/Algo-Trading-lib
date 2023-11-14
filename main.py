@@ -1,3 +1,4 @@
+from utils import Alpha
 import threading
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -58,19 +59,21 @@ def get_history(ticker, start, end, interval="1d", tries=0):
 
 def get_histories(tickers, period_start, period_end):
     dfs = [None] * len(tickers)
+    filterd_tickers = []  # gets correct ticker list incl in dfs
 
     def _helper(i):
         df = get_history(tickers[i],
                          period_start[i],
                          period_end[i])
         dfs[i] = df
+        if not df.empty:
+            filterd_tickers.append(tickers[i])
+
     threads = [threading.Thread(target=_helper, args=(i,))
                for i in range(len(tickers))]
     [thread.start() for thread in threads]
     [thread.join()for thread in threads]
-    tickers = [tickers[i] in tickers for i in range(
-        len(tickers)) if not dfs[i].empty]
-    return dfs, tickers
+    return dfs, filterd_tickers
 
 
 def get_ticker_df(start, end):
@@ -87,16 +90,22 @@ def get_ticker_df(start, end):
             period_end=ends
         )
         tickers_dfs = {ticker: df for ticker, df in zip(tickers, dfs)}
-        save_pickle("dataset.obj")
+        save_pickle("dataset.obj", obj=(tickers, tickers_dfs))
     return tickers, tickers_dfs
 
 
 """Main code"""
 
+
 tickers = get_sp500_tickers()
 
 tz_utc = pytz.utc
 per_start = datetime(2016, 1, 1)
-per_stop = datetime(2021, 1, 1)
-
+per_stop = datetime.now()
 tickers, dict_tickers = get_ticker_df(start=per_start, end=per_stop)
+
+alpha = Alpha(insts=tickers,
+              start=per_start,
+              end=per_stop,
+              dfs=dict_tickers)
+alpha.run_backtest()
