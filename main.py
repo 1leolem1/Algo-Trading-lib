@@ -22,16 +22,81 @@ def get_sp500_tickers():
     return list(df[0].Symbol)
 
 
+def get_history(ticker, start, end, interval="1d", tries=0):
+    try:
+        df = yf.Ticker(ticker).history(start=start,
+                                       end=end,
+                                       interval=interval,
+                                       auto_adjust=True
+                                       ).reset_index()
+    except Exception as err:
+
+        if tries < 5:
+            return get_history(ticker, start, end, interval, tries+1)
+        return pd.DataFrame()
+    try:
+        df = df.rename(columns={
+            "Date": "datetime",
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Volume": "volume"
+        })
+        df = df.drop(columns=["Dividends", "Stock Splits"])
+    except:
+        pass
+
+    if df.empty:
+        return pd.DataFrame()
+    df["datetime"] = df["datetime"].dt.tz_localize(
+        None).dt.tz_localize(pytz.utc)
+    df = df.set_index("datetime", drop=True)
+    print(ticker)
+    return pd.DataFrame(df)
+
+
+def get_histories(tickers, period_start, period_end):
+    dfs = [None] * len(tickers)
+
+    def _helper(i):
+        df = get_history(tickers[i],
+                         period_start[i],
+                         period_end[i])
+        dfs[i] = df
+    threads = [threading.Thread(target=_helper, args=(i,))
+               for i in range(len(tickers))]
+    [thread.start() for thread in threads]
+    [thread.join()for thread in threads]
+    tickers = [tickers[i] in tickers for i in range(
+        len(tickers)) if not dfs[i].empty]
+    return dfs, tickers
+
+
+def get_ticker_df(start, end):
+    from utils import load_pickle, save_pickle
+    try:
+        tickers, tickers_dfs = load_pickle("dataset.obj")
+    except Exception as err:
+        # Gets a dictionary that maps ticker to df
+        tickers = get_sp500_tickers()
+        starts, ends = [start]*len(tickers), [end]*len(tickers)
+        dfs, tickers = get_histories(
+            tickers=tickers,
+            period_start=starts,
+            period_end=ends
+        )
+        tickers_dfs = {ticker: df for ticker, df in zip(tickers, dfs)}
+        save_pickle("dataset.obj")
+    return tickers, tickers_dfs
+
+
+"""Main code"""
+
 tickers = get_sp500_tickers()
 
-per_start = datetime(2014, 1, 1, tzinfo=pytz.utc)
-per_stop = datetime(2023, 11, 13, tzinfo=pytz.utc)
+tz_utc = pytz.utc
+per_start = datetime(2016, 1, 1)
+per_stop = datetime(2021, 1, 1)
 
-
-def get_history(ticker, start, end, interval="1d"):
-    df = yf.Ticker(ticker).history(start=start,
-                                   end=end,
-                                   interval=interval,
-                                   auto_adjust=True
-                                   )
-    return df
+tickers, dict_tickers = get_ticker_df(start=per_start, end=per_stop)
