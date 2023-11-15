@@ -100,9 +100,13 @@ def get_ticker_df(start, end):
 tickers = get_sp500_tickers()
 
 tz_utc = pytz.utc
-per_start = datetime(2016, 1, 1)
-per_stop = datetime.now()
+per_start = datetime(2016, 1, 1, tzinfo=tz_utc)
+per_stop = datetime.now(tz_utc)
 tickers, dict_tickers = get_ticker_df(start=per_start, end=per_stop)
+
+test_no = 50
+tickers = tickers[:test_no]
+
 
 alpha = Alpha(insts=tickers,
               start=per_start,
