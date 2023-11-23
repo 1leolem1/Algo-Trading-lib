@@ -16,6 +16,32 @@ def save_pickle(path, obj):
         file = pickle.dump(obj, fp)
     return file
 
+# REWRITE FUNCTION - NEEDED TO APPEND VWAP ON DF
+
+# def vwap(inst_open, volumes, window):
+#     """
+#     prices: A list of prices - using open (can't trade from upcoming close).
+#     volumes: A list of volumes corresponding to the prices.
+#     window: The time window for which to calculate the VWAP values.
+#     Returns a list of VWAP values for the given time window.
+#     """
+
+#     vwap_values = pd.DataFrame(index=inst_open.index)
+#     total_value = 0
+#     total_volume = 0
+#     start = vwap_values[0]
+
+#     for index in vwap_values():
+#         total_value += inst_open[index] * volumes[index]
+#         total_volume += volumes[index]
+#         if index-start >= window:
+#             total_value -= inst_open[i-window] * volumes[i-window]
+#             total_volume -= volumes[i-window]
+#         vwap = total_value / total_volume
+#         vwap_values.append(vwap)
+
+#     return vwap_values
+
 
 def get_pnl_stats(date, prev_date, portfolio_df, insts, idx, dfs):
     daily_pnl = 0
