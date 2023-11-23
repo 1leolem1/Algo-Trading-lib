@@ -3,6 +3,7 @@ import dill as pickle
 import pandas as pd
 import numpy as np
 import random as r
+import matplotlib.pyplot as plt
 
 
 def load_pickle(path):
@@ -16,31 +17,23 @@ def save_pickle(path, obj):
         file = pickle.dump(obj, fp)
     return file
 
-# REWRITE FUNCTION - NEEDED TO APPEND VWAP ON DF
 
-# def vwap(inst_open, volumes, window):
-#     """
-#     prices: A list of prices - using open (can't trade from upcoming close).
-#     volumes: A list of volumes corresponding to the prices.
-#     window: The time window for which to calculate the VWAP values.
-#     Returns a list of VWAP values for the given time window.
-#     """
+def vwap(prices, volumes, window):
+    """
+    prices: A pandas Series of prices.
+    volumes: A pandas Series of volumes corresponding to the prices.
+    window: The time window for which to calculate the VWAP values.
+    Returns a pandas Series of VWAP values for the given time window.
+    """
+    df = pd.DataFrame({'prices': prices, 'volumes': volumes})
 
-#     vwap_values = pd.DataFrame(index=inst_open.index)
-#     total_value = 0
-#     total_volume = 0
-#     start = vwap_values[0]
+    total_value = df['prices'] * df['volumes']
+    total_volume = df['volumes']
 
-#     for index in vwap_values():
-#         total_value += inst_open[index] * volumes[index]
-#         total_volume += volumes[index]
-#         if index-start >= window:
-#             total_value -= inst_open[i-window] * volumes[i-window]
-#             total_volume -= volumes[i-window]
-#         vwap = total_value / total_volume
-#         vwap_values.append(vwap)
+    vwap_values = (total_value.rolling(window=window).sum() /
+                   total_volume.rolling(window=window).sum()).fillna(0)
 
-#     return vwap_values
+    return vwap_values
 
 
 def get_pnl_stats(date, prev_date, portfolio_df, insts, idx, dfs):
@@ -81,6 +74,11 @@ class Alpha():
 
     def compute_meta_informations(self, trade_range):
         for inst in self.insts:
+
+            # Calculate VWAP with intermediary columns
+            self.dfs[inst]['vwap_200'] = vwap(
+                prices=self.dfs[inst]['close'], volumes=self.dfs[inst]['volume'], window=200)
+
             df = pd.DataFrame(index=trade_range)
             self.dfs[inst] = df.join(self.dfs[inst])\
                 .fillna(method="ffill")\
@@ -91,13 +89,19 @@ class Alpha():
                 1).fillna(method="bfill")
             eligible = sampled_bool.rolling(5).apply(
                 lambda x: int(np.any(x))).fillna(0)
-
             self.dfs[inst]["eligible"] = eligible.astype(
-                int) & (self.dfs[inst]["close"] > 0).astype(int)
-        return 0
+                int) & (self.dfs[inst]["close"] > 0).astype(int) & (self.dfs[inst]["vwap_200"] != 0).astype(int)
+
+            plt.plot(self.dfs[inst]["close"], label=inst + "Close")
+            plt.plot(self.dfs[inst]["vwap_200"], label=inst + " 200d vwap")
+            plt.title(inst + " Close and 200d VWAP", fontweight="bold")
+            plt.legend()
+            plt.show()
+
+            print(self.dfs[inst].head())
 
     def run_backtest(self):
-        print("Running BT...")
+        print("Running Backtest...")
         date_range = pd.date_range(start=self.start, end=self.end, freq="D")
         portfolio_df = self.init_portfolio_settings(trade_range=date_range)
 
