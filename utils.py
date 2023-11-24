@@ -26,13 +26,10 @@ def vwap(prices, volumes, window):
     Returns a pandas Series of VWAP values for the given time window.
     """
     df = pd.DataFrame({'prices': prices, 'volumes': volumes})
-
     total_value = df['prices'] * df['volumes']
     total_volume = df['volumes']
-
     vwap_values = (total_value.rolling(window=window).sum() /
                    total_volume.rolling(window=window).sum()).fillna(0)
-
     return vwap_values
 
 
@@ -91,14 +88,6 @@ class Alpha():
                 lambda x: int(np.any(x))).fillna(0)
             self.dfs[inst]["eligible"] = eligible.astype(
                 int) & (self.dfs[inst]["close"] > 0).astype(int) & (self.dfs[inst]["vwap_200"] != 0).astype(int)
-
-            plt.plot(self.dfs[inst]["close"], label=inst + "Close")
-            plt.plot(self.dfs[inst]["vwap_200"], label=inst + " 200d vwap")
-            plt.title(inst + " Close and 200d VWAP", fontweight="bold")
-            plt.legend()
-            plt.show()
-
-            print(self.dfs[inst].head())
 
     def run_backtest(self):
         print("Running Backtest...")
@@ -162,5 +151,7 @@ class Alpha():
             portfolio_df.loc[i, "nominal expo"] = nominal_expo_tot
             portfolio_df.loc[i, "leverage"] = nominal_expo_tot / \
                 portfolio_df.loc[i, "capital"]
+
+            print(self.dfs[inst].head())
 
             print(portfolio_df.loc[i])
