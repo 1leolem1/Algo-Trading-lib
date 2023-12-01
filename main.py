@@ -1,3 +1,4 @@
+from alphaMA import Alpha2
 from utils import Alpha
 import threading
 import pandas as pd
@@ -8,6 +9,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import pytz
+import quantstats as qs
 
 
 def get_sp500_tickers():
@@ -108,8 +110,10 @@ test_no = 50
 tickers = tickers[:test_no]
 
 
-alpha = Alpha(insts=tickers,
-              start=per_start,
-              end=per_stop,
-              dfs=dict_tickers)
-alpha.run_backtest()
+alpha = Alpha2(insts=tickers,
+               start=per_start,
+               end=per_stop,
+               dfs=dict_tickers)
+
+
+df = alpha.run_backtest()
